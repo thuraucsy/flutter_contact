@@ -27,6 +27,7 @@ dependencies:
   contacts_service: ^0.3.0
   permission_handler: ^3.2.2
   zawgyi_converter: ^0.1.1
+  floating_search_bar: ^0.2.0
 
 dev_dependencies:
   flutter_test:

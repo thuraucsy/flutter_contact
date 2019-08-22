@@ -3,6 +3,7 @@ import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:zawgyi_converter/zawgyi_converter.dart';
 import 'package:zawgyi_converter/zawgyi_detector.dart';
+import 'package:floating_search_bar/floating_search_bar.dart';
 
 ZawgyiDetector zawgyiDetector = ZawgyiDetector();
 ZawgyiConverter zawgyiConverter = ZawgyiConverter();
@@ -17,7 +18,7 @@ class MyApp extends StatefulWidget {
 }
 
 class MyAppState extends State {
-  List<Contact> _contacts;
+  List<Contact> _contacts, _contactsCopy;
 
   Future<PermissionStatus> _getContactPermission() async {
     PermissionStatus permission = await PermissionHandler()
@@ -50,6 +51,7 @@ class MyAppState extends State {
       setState(() {
         _contacts = zawgyiContacts;
       });
+      _contactsCopy = _contacts;
     }
   }
 
@@ -64,24 +66,48 @@ class MyAppState extends State {
     return MaterialApp(
       title: 'Welcome to Flutter',
       home: Scaffold(
-          appBar: AppBar(
-            title: Text('Welcome to Flutter'),
+          body: CustomScrollView(
+        slivers: <Widget>[
+          SliverFloatingBar(
+            title: TextField(
+              decoration: InputDecoration.collapsed(hintText: 'Search...'),
+              onChanged: (value) {
+
+                if (zawgyiDetector.predict(value) > 0.05) {
+                  value = zawgyiConverter.zawgyiToUnicode(value);
+                }
+                print('changing $value');
+
+                if (value.isNotEmpty) {
+                  setState(() {
+                    _contacts = _contactsCopy.where((c)  => c.displayName.contains(value)).toList();
+                  });
+                } else {
+                  setState(() {
+                    _contacts = _contactsCopy;
+                  });
+                }
+              },
+            ),
           ),
-          body: (_contacts == null)
-              ? Center(
-                  child: CircularProgressIndicator(),
-                )
-              : ListView.builder(
-                  itemCount: _contacts.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(_contacts.elementAt(index).displayName, style: TextStyle(fontFamily: 'masterpiece'),),
-                      subtitle: Text(_contacts.elementAt(index).phones.length >
-                              0
-                          ? _contacts.elementAt(index).phones.elementAt(0).value
-                          : ''),
-                    );
-                  })),
+          SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+            return (_contacts == null)
+                ? Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : ListTile(
+                    title: Text(
+                      _contacts.elementAt(index).displayName,
+                      style: TextStyle(fontFamily: 'masterpiece'),
+                    ),
+                    subtitle: Text(_contacts.elementAt(index).phones.length > 0
+                        ? _contacts.elementAt(index).phones.elementAt(0).value
+                        : ''),
+                  );
+          }, childCount: _contacts == null ? 1 : _contacts.length))
+        ],
+      )),
     );
   }
 }
