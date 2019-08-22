@@ -26,6 +26,7 @@ dependencies:
 
   contacts_service: ^0.3.0
   permission_handler: ^3.2.2
+  zawgyi_converter: ^0.1.1
 
 dev_dependencies:
   flutter_test:
@@ -73,3 +74,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+  fonts:
+    - family: masterpiece
+      fonts:
+        - asset: assets/masterpiece_uni-round.ttf
