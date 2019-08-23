@@ -4,13 +4,23 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:zawgyi_converter/zawgyi_converter.dart';
 import 'package:zawgyi_converter/zawgyi_detector.dart';
 import 'package:floating_search_bar/floating_search_bar.dart';
+import 'package:flare_flutter/flare_actor.dart';
 
 ZawgyiDetector zawgyiDetector = ZawgyiDetector();
 ZawgyiConverter zawgyiConverter = ZawgyiConverter();
 
-void main() => runApp(MyApp());
+void main() => runApp(MyStatelessApp());
 
-class MyApp extends StatefulWidget {
+class MyStatelessApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: MyStatefulApp(),
+    );
+  }
+}
+
+class MyStatefulApp extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
     return MyAppState();
@@ -19,6 +29,7 @@ class MyApp extends StatefulWidget {
 
 class MyAppState extends State {
   List<Contact> _contacts, _contactsCopy;
+  Set<Contact> _saved = Set<Contact>();
 
   Future<PermissionStatus> _getContactPermission() async {
     PermissionStatus permission = await PermissionHandler()
@@ -61,6 +72,71 @@ class MyAppState extends State {
     refreshContact();
   }
 
+  Widget _buildRow(Contact contact) {
+    bool alreadySaved = _saved.contains(contact);
+
+    return (contact == null)
+        ? Center(
+            child: CircularProgressIndicator(),
+          )
+        : ListTile(
+            title: Text(
+              contact.displayName,
+              style: TextStyle(fontFamily: 'masterpiece'),
+            ),
+            subtitle: Text(contact.phones.length > 0
+                ? contact.phones.elementAt(0).value
+                : ''),
+            trailing: SizedBox(
+              width: 50,
+              height: 50,
+              child: GestureDetector(
+                child: FlareActor(
+                  'assets/favorite.flr',
+                  animation: alreadySaved ? 'Favorite' : 'Unfavorite',
+                ),
+//                IconButton(
+//                  icon: Icon(alreadySaved
+//                      ? Icons.favorite
+//                      : Icons.favorite_border,
+//                  color: alreadySaved ? Colors.red: null,),
+//                ),
+                onTap: () {
+                  print('iconbutton');
+                  setState(() {
+                    if (alreadySaved) {
+                      _saved.remove(contact);
+                    } else {
+                      _saved.add(contact);
+                    }
+                  });
+                },
+              ),
+            ),
+          );
+  }
+
+  void _pushSaved() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Saved List'),
+        ),
+        body: ListView.builder(
+            itemCount: _saved.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(_saved.elementAt(index).displayName),
+                subtitle: Text(_saved.elementAt(index).phones.length > 0
+                    ? _saved.elementAt(index).phones.elementAt(0).value
+                    : ''),
+              );
+            }),
+      );
+    }));
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -72,7 +148,6 @@ class MyAppState extends State {
             title: TextField(
               decoration: InputDecoration.collapsed(hintText: 'Search...'),
               onChanged: (value) {
-
                 if (zawgyiDetector.predict(value) > 0.05) {
                   value = zawgyiConverter.zawgyiToUnicode(value);
                 }
@@ -80,7 +155,9 @@ class MyAppState extends State {
 
                 if (value.isNotEmpty) {
                   setState(() {
-                    _contacts = _contactsCopy.where((c)  => c.displayName.contains(value)).toList();
+                    _contacts = _contactsCopy
+                        .where((c) => c.displayName.contains(value))
+                        .toList();
                   });
                 } else {
                   setState(() {
@@ -89,22 +166,17 @@ class MyAppState extends State {
                 }
               },
             ),
+            trailing: IconButton(
+              icon: Icon(
+                Icons.favorite,
+                color: Colors.red.shade400,
+              ),
+              onPressed: _pushSaved,
+            ),
           ),
           SliverList(
               delegate: SliverChildBuilderDelegate((context, index) {
-            return (_contacts == null)
-                ? Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : ListTile(
-                    title: Text(
-                      _contacts.elementAt(index).displayName,
-                      style: TextStyle(fontFamily: 'masterpiece'),
-                    ),
-                    subtitle: Text(_contacts.elementAt(index).phones.length > 0
-                        ? _contacts.elementAt(index).phones.elementAt(0).value
-                        : ''),
-                  );
+            return _buildRow(_contacts?.elementAt(index));
           }, childCount: _contacts == null ? 1 : _contacts.length))
         ],
       )),
