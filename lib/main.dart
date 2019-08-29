@@ -49,12 +49,19 @@ class MyAppState extends State {
   refreshContact() async {
     PermissionStatus permissionStatus = await _getContactPermission();
     if (permissionStatus == PermissionStatus.granted) {
-      Iterable<Contact> contacts = await ContactsService.getContacts();
+      Iterable<Contact> contacts =
+          await ContactsService.getContacts(withThumbnails: false);
 
       List<Contact> zawgyiContacts = [];
       contacts.map((c) {
-        if (zawgyiDetector.predict(c.displayName) > 0.05) {
+        if (zawgyiDetector.predict(c.displayName) > 0.05 ||
+            zawgyiDetector.predict(c.givenName) > 0.05 ||
+            zawgyiDetector.predict(c.familyName) > 0.05 ||
+            zawgyiDetector.predict(c.middleName) > 0.05) {
           c.displayName = zawgyiConverter.zawgyiToUnicode(c.displayName);
+          c.givenName = zawgyiConverter.zawgyiToUnicode(c.givenName);
+          c.familyName = zawgyiConverter.zawgyiToUnicode(c.familyName);
+          c.middleName = zawgyiConverter.zawgyiToUnicode(c.middleName);
           zawgyiContacts.add(c);
         }
       }).toList();
@@ -122,6 +129,17 @@ class MyAppState extends State {
       return Scaffold(
         appBar: AppBar(
           title: Text('Saved List'),
+          actions: <Widget>[
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () {
+                print('_pushSaved save');
+                _saved.map((c) async {
+                  await ContactsService.updateContact(c);
+                }).toList();
+              },
+            )
+          ],
         ),
         body: ListView.builder(
             itemCount: _saved.length,
